@@ -15,6 +15,7 @@ Because Tiny Tapeout has a limited I/O count, the 128-bit plaintext and 128-bit 
 The encryption process follows the standard FIPS-197 algorithm, executing 10 iterative rounds:  - Initial Round: XOR with the original key.
 - Main Rounds (1-9): SubBytes, ShiftRows, MixColumns, and AddRoundKey.
 - Final Round (10): SubBytes, ShiftRows, and AddRoundKey (MixColumns is bypassed).
+
 The result is stored in an output register, which can be read back byte-by-byte using the same 4-bit index bus.
 
 ## How to test
