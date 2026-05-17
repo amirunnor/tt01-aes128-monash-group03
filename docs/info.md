@@ -12,7 +12,8 @@ You can also include images in this folder and reference them in the markdown. E
 This project implements a hardware-accelerated AES-128 encryption core using an iterative architecture to minimize area on the silicon.  
 
 Because Tiny Tapeout has a limited I/O count, the 128-bit plaintext and 128-bit key are loaded into internal registers using a byte-serial interface. The user provides 8 bits of data via ui_in and a 4-bit index via uio_in[3:0] to specify which byte is being updated. Once the data is fully staged in the registers, a start pulse triggers the FSM.  
-The encryption process follows the standard FIPS-197 algorithm, executing 10 iterative rounds:  - Initial Round: XOR with the original key.
+The encryption process follows the standard FIPS-197 algorithm, executing 10 iterative rounds:  
+- Initial Round: XOR with the original key.
 - Main Rounds (1-9): SubBytes, ShiftRows, MixColumns, and AddRoundKey.
 - Final Round (10): SubBytes, ShiftRows, and AddRoundKey (MixColumns is bypassed).
 
