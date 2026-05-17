@@ -36,7 +36,7 @@ async def test_project(dut):
     # Change it to match the actual expected output of your module:
     # Just check that the busy/done signals are initialized to 0
     # uio_out[7] = busy, uio_out[6] = done
-    assert (dut.uio_out.value & 0xC0) == 0
+    assert (int(dut.uio_out.value) & 0xC0) == 0
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.
