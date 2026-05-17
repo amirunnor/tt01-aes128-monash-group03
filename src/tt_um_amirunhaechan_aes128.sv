@@ -1,6 +1,6 @@
 `default_nettype none
 
-module tt_um_aes128_wrapper (
+module tt_um_amirunhaechan_aes128 (
     input  wire [7:0] ui_in,    // Dedicated inputs: Data Byte
     output wire [7:0] uo_out,   // Dedicated outputs: Ciphertext Byte
     input  wire [7:0] uio_in,   // IOs: Control signals
