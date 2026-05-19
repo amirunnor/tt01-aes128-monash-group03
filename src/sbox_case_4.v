@@ -19,7 +19,7 @@ module GF_MULS_2 ( A, ab, B, cd, Y );
     input cd;
     output [1:0] Y;
     wire abcd, p, q;
-    assign abcd = ~(ab & cd); /* note: ~& syntax for NAND won¡¯t compile */
+    assign abcd = ~(ab & cd); /* note: ~& syntax for NAND won ¯t compile */
     assign p = (~(A[1] & B[1])) ^ abcd;
     assign q = (~(A[0] & B[0])) ^ abcd;
     assign Y = { p, q };
@@ -33,7 +33,7 @@ module GF_MULS_SCL_2 ( A, ab, B, cd, Y );
     input cd;
     output [1:0] Y;
     wire t, p, q;
-    assign t = ~(A[0] & B[0]); /* note: ~& syntax for NAND won¡¯t compile */
+    assign t = ~(A[0] & B[0]); /* note: ~& syntax for NAND won ¯t compile */
     assign p = (~(ab & cd)) ^ t;
     assign q = (~(A[1] & B[1])) ^ t;
     assign Y = { p, q };
@@ -55,7 +55,7 @@ output [3:0] Y;
     GF_SCLW2_2 absclN( ab2, ab2N);
     GF_SQ_2 dinv( (ab ^ ab2N), d);
     */
-    assign c = { /* note: ~| syntax for NOR won¡¯t compile */
+    assign c = { /* note: ~| syntax for NOR won ¯t compile */
     ~(a[1] | b[1]) ^ (~(sa & sb)) ,
     ~(sa | sb) ^ (~(a[0] & b[0])) };
     GF_SQ_2 dinv( c, d);
