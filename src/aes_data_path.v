@@ -16,35 +16,16 @@ module aes_data_path(
     assign sr_in = rk_delayed_out ^ s_out;
     assign d_out = sbox_o ^ rk_last_out;
 
-    // Unit Instantiations
-    byte_permutation SR (
-        .in(sr_in), 
-        .out(sr_out), 
-        .c3(c3), 
-        .clk(clk)
-    );
+    // SR: byte_permutation (din, dout, c3, clk)
+    byte_permutation SR (sr_in, sr_out, c3, clk);
 
-    ps_conv PS (
-        .d_in(d_in), 
-        .s_out(s_out), 
-        .pdin(pdin), 
-        .pld(pld), 
-        .clk(clk)
-    );
+    // PS: ps_conv (din, dout, pdin, pld, clk)
+    ps_conv PS (d_in, s_out, pdin, pld, clk);
 
-    mixcolumn_8 MC (
-        .sbox_o(sbox_o), 
-        .mc_en(mc_en), 
-        .mc_out0(mc_out0), 
-        .mc_out1(mc_out1), 
-        .mc_out2(mc_out2), 
-        .mc_out3(mc_out3), 
-        .clk(clk)
-    );
+    // MC: mixcolumn_8 (din, en, dout0, dout1, dout2, dout3, clk)
+    mixcolumn_8 MC (sbox_o, mc_en, mc_out0, mc_out1, mc_out2, mc_out3, clk);
 
-    bSbox SB (
-        .in(sr_out), 
-        .out(sbox_o)
-    );
+    // SB: bSbox (A, Q)
+    bSbox SB (sr_out, sbox_o);
 
 endmodule
