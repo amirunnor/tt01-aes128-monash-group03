@@ -6,7 +6,7 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_amirun_8_aes.v aes_data_path.v byte_permutation_unit.v key_expansion.v mixcolumn.v mux.v parallel_serial_converter.v sbox_case_4.v
+PROJECT_SOURCES = tt_um_amirunhaechan_aes128.sv aes_top.sv aes_core.sv aes_round.sv final_round.sv key_expansion.sv addroundkey.sv sbox.sv subbytes.sv shiftrows.sv mixcolumns_one_column.sv mixcolumns.sv
 
 ifneq ($(GATES),yes)
 
