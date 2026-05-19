@@ -1,11 +1,35 @@
-module tt_um_amirun_8_aes (rst, clk, key_in, d_in, d_out, d_vld);
-    input rst, clk;
-    input [7:0] key_in;
-    input [7:0] d_in;
-    output [7:0] d_out;
-    output reg d_vld;
+/*
+ * Cleaned UTF-8 Verilog for 8-bit Serial AES-128
+ * Top Module: tt_um_amirun_8_aes
+ */
 
-    //key scheduler controller
+module tt_um_amirun_8_aes (
+    input  wire [7:0] ui_in,    // Dedicated inputs - mapped to d_in
+    output wire [7:0] uo_out,   // Dedicated outputs - mapped to d_out
+    input  wire [7:0] uio_in,   // IOs: Input path - mapped to key_in
+    output wire [7:0] uio_out,  // IOs: Output path
+    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
+    input  wire       ena,      // always 1 when the design is powered
+    input  wire       clk,      // clock
+    input  wire       rst_n     // reset_n - low to reset
+);
+
+    // Internal Reset Logic (Tiny Tapeout uses active-low reset)
+    wire rst = !rst_n;
+
+    // Mapping TT pins to internal signals
+    wire [7:0] d_in   = ui_in;
+    wire [7:0] key_in = uio_in;
+    wire [7:0] d_out_w;
+    reg  [7:0] d_out_reg;
+    reg        d_vld;
+
+    // Control and Status
+    assign uo_out = d_out_reg;
+    assign uio_oe = 8'h00;    // Configure all uio as inputs for key_in
+    assign uio_out = 8'h00;
+
+    // Internal State/Control Signals
     wire [3:0] round_cnt_w;
     reg input_sel, sbox_sel, last_out_sel, bit_out_sel;
     reg [7:0] rcon_en;
@@ -18,187 +42,137 @@ module tt_um_amirun_8_aes (rst, clk, key_in, d_in, d_out, d_vld);
     reg [7:0] mc_en_reg;
     reg pld_reg;
     wire [7:0] mc_en;
-    reg [7:0] d_out;
-    wire [7:0] d_out_w;
 
-    always @ (posedge clk)
-    begin
-        d_out <= d_out_w;
+    always @(posedge clk) begin
+        d_out_reg <= d_out_w;
     end
 
     assign pld = pld_reg;
     assign mc_en = mc_en_reg;
     assign round_cnt_w = round_cnt[7:4];
 
-    key_expansion key (key_in, rk_delayed_out, round_cnt_w, rk_last_out, clk, input_sel, sbox_sel, last_out_sel, bit_out_sel, rcon_en);
-    aes_data_path data_path (d_in, d_out_w, pld, c3, clk, mc_en, rk_delayed_out, rk_last_out);
+    // Sub-module Instantiations
+    key_expansion key (
+        .key_in(key_in), 
+        .rk_delayed_out(rk_delayed_out), 
+        .round_cnt(round_cnt_w), 
+        .rk_last_out(rk_last_out), 
+        .clk(clk), 
+        .input_sel(input_sel), 
+        .sbox_sel(sbox_sel), 
+        .last_out_sel(last_out_sel), 
+        .bit_out_sel(bit_out_sel), 
+        .rcon_en(rcon_en)
+    );
 
-    parameter load = 3'h0; //load 16 byte
-    parameter b1st = 3'h1; //first byte need rcon
-    parameter b2nd = 3'h2; //2byte go through sbox
-    parameter b3rd = 3'h3; //last byte go through sbox from redundant register
-    parameter norm = 3'h4; //normal round calculate two columns
-    parameter shif = 3'h5; //shift 4 byte 
+    aes_data_path data_path (
+        .d_in(d_in), 
+        .d_out(d_out_w), 
+        .pld(pld), 
+        .c3(c3), 
+        .clk(clk), 
+        .mc_en(mc_en), 
+        .rk_delayed_out(rk_delayed_out), 
+        .rk_last_out(rk_last_out)
+    );
 
-    //state machine for key schedule
-    always @ (posedge clk)
-    begin
-        if (rst == 1'b1)
-        begin
-            state <= load;
+    // FSM Parameters
+    localparam LOAD_S = 3'h0;
+    localparam B1ST_S = 3'h1;
+    localparam B2ND_S = 3'h2;
+    localparam B3RD_S = 3'h3;
+    localparam NORM_S = 3'h4;
+    localparam SHIF_S = 3'h5;
+
+    // FSM Logic
+    always @(posedge clk) begin
+        if (rst) begin
+            state <= LOAD_S;
             cnt <= 4'h0;
-        end
-        else
-        begin
+        end else begin
             case (state)
-                load: 
-                begin
+                LOAD_S: begin
                     cnt <= cnt + 4'h1;
-                    if (cnt == 4'hf)
-                    begin
-                        state <= b1st;
+                    if (cnt == 4'hf) begin
+                        state <= B1ST_S;
                         cnt <= 4'h0;
                     end
                 end
-
-                b1st:
-                begin
-                    state <= b2nd;
+                B1ST_S: begin
+                    state <= B2ND_S;
                     cnt <= 4'h0;
                 end
-
-                b2nd:
-                begin
+                B2ND_S: begin
                     cnt <= cnt + 4'h1;
-                    if (cnt == 4'h1)
-                    begin
-                        state <= b3rd;
+                    if (cnt == 4'h1) begin
+                        state <= B3RD_S;
                         cnt <= 4'h0;
                     end
                 end
-                
-                b3rd:
-                begin
-                    state <= norm;
+                B3RD_S: begin
+                    state <= NORM_S;
                     cnt <= 4'h0;
                 end
-
-                norm: 
-                begin
+                NORM_S: begin
                     cnt <= cnt + 4'h1;
-                    if(cnt == 4'h7)
-                    begin
-                        state <= shif;
+                    if (cnt == 4'h7) begin
+                        state <= SHIF_S;
                         cnt <= 4'h0;
                     end
                 end
-
-                shif:
-                begin
+                SHIF_S: begin
                     cnt <= cnt + 4'h1;
-                    if(cnt == 4'h3)
-                    begin
-                        state <= b1st;
+                    if (cnt == 4'h3) begin
+                        state <= B1ST_S;
                         cnt <= 4'h0;
                     end
                 end
+                default: state <= LOAD_S;
             endcase
         end
     end
 
-    //mux select and rcon enable for key schedule
-    always @ (*)
-    begin
-        case(state)
-            load: 
-            begin
-                input_sel <= 1'b0;
-                sbox_sel <= 1'b1;
-                last_out_sel <= 1'b0;
-                bit_out_sel <= 1'b0;
-                rcon_en <= 8'h00;
+    // Combinational Logic for Control
+    always @(*) begin
+        input_sel    = 1'b1;
+        sbox_sel     = 1'b0;
+        last_out_sel = 1'b0;
+        bit_out_sel  = 1'b0;
+        rcon_en      = 8'h00;
+        case (state)
+            LOAD_S: begin
+                input_sel = 1'b0; sbox_sel = 1'b1; last_out_sel = 1'b0; bit_out_sel = 1'b0; rcon_en = 8'h00;
             end
-
-            b1st:
-            begin
-                input_sel <= 1'b1;
-                sbox_sel <= 1'b1;
-                last_out_sel <= 1'b0;
-                bit_out_sel <= 1'b1;
-                rcon_en <= 8'hFF;
+            B1ST_S: begin
+                input_sel = 1'b1; sbox_sel = 1'b1; last_out_sel = 1'b0; bit_out_sel = 1'b1; rcon_en = 8'hFF;
             end
-                 
-            b2nd:
-            begin
-                input_sel <= 1'b1;
-                sbox_sel <= 1'b1;
-                last_out_sel <= 1'b0;
-                bit_out_sel <= 1'b1;
-                rcon_en <= 8'h00;
+            B2ND_S: begin
+                input_sel = 1'b1; sbox_sel = 1'b1; last_out_sel = 1'b0; bit_out_sel = 1'b1; rcon_en = 8'h00;
             end
-
-            b3rd:
-            begin
-                input_sel <= 1'b1;
-                sbox_sel <= 1'b0;
-                last_out_sel <= 1'b0;
-                bit_out_sel <= 1'b1;
-                rcon_en <= 8'h00;
+            B3RD_S: begin
+                input_sel = 1'b1; sbox_sel = 1'b0; last_out_sel = 1'b0; bit_out_sel = 1'b1; rcon_en = 8'h00;
             end
-
-            norm:
-            begin
-                input_sel <= 1'b1;
-                sbox_sel <= 1'b0;
-                last_out_sel <= 1'b1;
-                bit_out_sel <= 1'b1;
-                rcon_en <= 8'h00;
+            NORM_S: begin
+                input_sel = 1'b1; sbox_sel = 1'b0; last_out_sel = 1'b1; bit_out_sel = 1'b1; rcon_en = 8'h00;
             end
-
-            shif:
-            begin
-                input_sel <= 1'b1;
-                sbox_sel <= 1'b0;
-                last_out_sel <= 1'b1;
-                bit_out_sel <= 1'b0;
-                rcon_en <= 8'h00;
-            end
-
-            default: 
-            begin
-                input_sel <= 1'b0;
-                sbox_sel <= 1'b1;
-                last_out_sel <= 1'b0;
-                bit_out_sel <= 1'b0;
-                rcon_en <= 8'h00;
+            SHIF_S: begin
+                input_sel = 1'b1; sbox_sel = 1'b0; last_out_sel = 1'b1; bit_out_sel = 1'b0; rcon_en = 8'h00;
             end
         endcase
     end
 
-    //round counter
-    always @ (posedge clk)
-    begin
-        if (rst == 1'b1 || cnt == 4'hf || round_cnt_w == 4'ha)
-        begin
-            round_cnt <= 6'h00;
-        end
+    // Counter and Control Registers
+    always @(posedge clk) begin
+        if (rst || cnt == 4'hf || round_cnt_w == 4'ha)
+            round_cnt <= 8'h00;
         else
-        begin
-            round_cnt <= round_cnt + 6'h01;
-        end
+            round_cnt <= round_cnt + 8'h01;
     end
 
-
-   
-    //state machine shift row
-    always @ (posedge clk)
-    begin
-        if (state == load) 
-        begin
+    always @(posedge clk) begin
+        if (state == LOAD_S) 
             c3 <= 2'h3;
-        end
-        else
-        begin
+        else begin
             case (round_cnt[3:0])
                 4'h0: c3 <= 2'h2;
                 4'h1: c3 <= 2'h1;
@@ -220,52 +194,17 @@ module tt_um_amirun_8_aes (rst, clk, key_in, d_in, d_out, d_vld);
         end
     end
 
-    //mixcoloumn enable
-    always @ (posedge clk)
-    begin
-        if (round_cnt[1:0] == 2'b11)
-        begin
-            mc_en_reg <= 8'h00;
-        end
-        else
-        begin
-            mc_en_reg <= 8'hFF;
-        end
-    end
-
-    //parelle load
-    always @ (posedge clk)
-    begin
-        if (state == load)
-        begin
+    always @(posedge clk) begin
+        mc_en_reg <= (round_cnt[1:0] == 2'b11) ? 8'h00 : 8'hFF;
+        if (state == LOAD_S)
             pld_reg <= 1'b0;
-        end
         else
-        begin
-            if (round_cnt[1:0] == 2'b11)
-            begin
-                pld_reg <= 1'b1;
-            end
-            else
-            begin
-                pld_reg <= 1'b0;
-            end
-        end
+            pld_reg <= (round_cnt[1:0] == 2'b11);
     end
 
-    always @(posedge clk)
-    begin
-        if (rst == 1'b1)
-        begin
-            d_vld <= 1'b0;
-        end
-        else
-        begin
-            if (round_cnt == 8'h90)
-            begin
-                d_vld <= 1'b1;
-            end
-        end
+    always @(posedge clk) begin
+        if (rst) d_vld <= 1'b0;
+        else if (round_cnt == 8'h90) d_vld <= 1'b1;
     end
+
 endmodule
-
