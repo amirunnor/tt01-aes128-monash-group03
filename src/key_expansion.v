@@ -68,10 +68,8 @@ module key_expansion(
         .sel(last_out_sel)
     );
 
-    bSbox sbox (
-        .in(sbox_in), 
-        .out(sbox_o)
-    );
+    // Using positional mapping: (input, output)
+    bSbox sbox (sbox_in, sbox_o);
 
     // Key register shift bank
     always @ (posedge clk) begin
