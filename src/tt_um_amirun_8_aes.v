@@ -15,14 +15,15 @@ module tt_um_amirun_8_aes (
 );
 
     // Internal Signal Mapping
-    wire rst = !rst_n;
+    wire rst = !rst_n || !ena;
     wire [7:0] key_in = uio_in;
     wire [7:0] d_in   = ui_in;
     wire [7:0] d_out_w;
     reg  [7:0] d_out_reg;
     reg        d_vld;
 
-    assign uo_out  = d_out_reg;
+    assign uio_out[0] = d_vld;
+    assign uio_oe[0]  = 1'b1; // Set uio[0] as an output
     assign uio_out = 8'b0;      // uio pins used as inputs for key
     assign uio_oe  = 8'b0;      // all uio pins are inputs
 
