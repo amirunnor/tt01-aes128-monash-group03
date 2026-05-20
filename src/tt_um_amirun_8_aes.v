@@ -22,10 +22,12 @@ module tt_um_amirun_8_aes (
     reg  [7:0] d_out_reg;
     reg        d_vld;
 
-    assign uio_out[0] = d_vld;
-    assign uio_oe[0]  = 1'b1; // Set uio[0] as an output
-    assign uio_out = 8'b0;      // uio pins used as inputs for key
-    assign uio_oe  = 8'b0;      // all uio pins are inputs
+    // Connect the internal register to the physical output pins (uo_out)
+    assign uo_out = d_out_reg;
+
+    // Use uio[0] for d_vld, and keep uio[7:1] as inputs for the key
+    assign uio_out = {7'b0, d_vld}; 
+    assign uio_oe  = 8'b00000001;   // Only bit 0 is an output (for d_vld)
 
     // Controller signals
     wire [3:0] round_cnt_w;
